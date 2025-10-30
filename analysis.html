@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Powered Brand Sentiment Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { font-family: 'Inter', sans-serif; margin: 0; box-sizing: border-box; }
+    body { background: #f4f7fb; padding: 20px; }
+    .container { max-width: 1100px; background: #fff; padding: 24px; margin: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    h1 { text-align: center; color: #0ea5a4; margin-bottom: 10px; }
+    p { text-align: center; color: #555; margin-bottom: 30px; }
+    textarea { width: 100%; height: 150px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; resize: vertical; font-size: 14px; }
+    button { background: #0ea5a4; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px; }
+    button:hover { background: #0d9488; }
+    .results { margin-top: 20px; background: #f8fffd; border-radius: 10px; padding: 20px; border: 1px solid #d1fae5; }
+    .result-line { margin: 6px 0; padding: 8px; border-radius: 6px; border-left: 6px solid #ccc; }
+    .positive { border-left-color: #22c55e; background: #ecfdf5; }
+    .negative { border-left-color: #ef4444; background: #fef2f2; }
+    .neutral { border-left-color: #eab308; background: #fffbeb; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px; font-size: 14px; text-align: left; }
+    th { background: #0ea5a4; color: white; }
+    canvas { margin-top: 20px; }
+    .footer { margin-top: 30px; text-align: center; color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI-Powered Brand Sentiment Analyzer</h1>
+    <p>Analyze campaign comments, detect emotions, keywords, and visualize trends — all in your browser.</p>
+
+    <textarea id="inputText" placeholder="Enter or paste comments, one per line...">Love the new campaign visuals, so creative and positive!
+Poor video editing and execution.
+Amazing storytelling by the marketing team.
+Pricing is too high, disappointed.
+Very engaging and joyful content!</textarea>
+    <button onclick="analyzeSentiment()">Analyze Now</button>
+
+    <div class="results" id="resultSection" style="display:none;">
+      <h2>Analysis Results</h2>
+      <div id="outputArea"></div>
+      <canvas id="trendChart"></canvas>
+
+      <h2>Feature Overview</h2>
+      <table>
+        <tr><th>Feature</th><th>Explanation</th></tr>
+        <tr><td><b>Sentiment Classification</b></td><td>Categorizes opinions as positive, negative, or neutral</td></tr>
+        <tr><td><b>Emotion Detection</b></td><td>Identifies emotional tone (joy, anger, trust, sadness)</td></tr>
+        <tr><td><b>Keyword & Phrase Extraction</b></td><td>Detects repeated words/phrases related to brand perception</td></tr>
+        <tr><td><b>Topic Categorization</b></td><td>Groups feedback by themes (product quality, support, pricing)</td></tr>
+        <tr><td><b>Trend Analysis</b></td><td>Tracks sentiment change over time (improving or declining image)</td></tr>
+        <tr><td><b>Brand Mentions Tracking</b></td><td>Counts how often the brand is discussed online and where</td></tr>
+        <tr><td><b>Customer Voice Analysis</b></td><td>Understands tone, complaints, praises, and writing style</td></tr>
+        <tr><td><b>Competitive Sentiment Benchmarking</b></td><td>Compares brand sentiment vs competitors</td></tr>
+        <tr><td><b>Influencer & Source Impact</b></td><td>Identifies major positive/negative influencers on sentiment</td></tr>
+        <tr><td><b>Spam / Bot Filtering</b></td><td>Removes automated or fake sentiment noise from analysis</td></tr>
+        <tr><td><b>Crisis / Risk Detection</b></td><td>Captures sudden spikes in negative sentiment (PR issues)</td></tr>
+        <tr><td><b>Customer Satisfaction Index Support</b></td><td>Helps calculate NPS, CSAT, and loyalty scores</td></tr>
+      </table>
+    </div>
+
+    <div class="footer">Developed by <b>Monika R</b> | AI & Data Science | Ginger Media Internship Project</div>
+  </div>
+
+  <script>
+    const positiveWords = ["love","amazing","great","excellent","good","creative","inspiring","superb","brilliant","impressed","fantastic","engaging","joyful","happy"];
+    const negativeWords = ["bad","worst","poor","disappointing","hate","terrible","awful","boring","slow","expensive","sad","angry","low"];
+    const emotionMap = {
+      joy:["love","amazing","happy","joyful","great"],
+      anger:["angry","hate","furious","poor"],
+      trust:["confident","reliable","good","creative"],
+      sadness:["sad","bad","disappointing","unhappy"]
+    };
+
+    function analyzeSentiment() {
+      const text = document.getElementById('inputText').value.trim();
+      if (!text) return alert("Please enter text to analyze.");
+      const lines = text.split("\n").filter(Boolean);
+      const outputArea = document.getElementById('outputArea');
+      outputArea.innerHTML = "";
+
+      let posCount = 0, negCount = 0, neuCount = 0;
+      let trendData = [];
+
+      lines.forEach((line, index) => {
+        let p = 0, n = 0, emoFound = [];
+        const words = line.toLowerCase().match(/\b[a-z']+\b/g) || [];
+        words.forEach(w => {
+          if (positiveWords.includes(w)) p++;
+          if (negativeWords.includes(w)) n++;
+          for (const [emotion, arr] of Object.entries(emotionMap)) {
+            if (arr.includes(w)) emoFound.push(emotion);
+          }
+        });
+
+        let sentiment = "Neutral";
+        if (p > n) { sentiment = "Positive"; posCount++; }
+        else if (n > p) { sentiment = "Negative"; negCount++; }
+        else neuCount++;
+
+        // Emotion detection
+        const emotion = emoFound.length ? emoFound[0] : "neutral";
+
+        // Keyword extraction
+        const keywords = [...new Set(words.filter(w => p>0 && positiveWords.includes(w) || n>0 && negativeWords.includes(w)))];
+
+        const div = document.createElement("div");
+        div.className = `result-line ${sentiment.toLowerCase()}`;
+        div.innerHTML = `<b>${sentiment}</b> | Emotion: ${emotion} | Keywords: ${keywords.join(", ") || "None"}<br>${line}`;
+        outputArea.appendChild(div);
+
+        trendData.push({index:index+1,score:(p-n)});
+      });
+
+      document.getElementById('resultSection').style.display = "block";
+
+      // Chart visualization (Trend Analysis)
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: trendData.map(t=>`Comment ${t.index}`),
+          datasets: [{
+            label: 'Sentiment Trend',
+            data: trendData.map(t=>t.score),
+            borderColor: '#0ea5a4',
+            fill: false,
+            tension: 0.3
+          }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+    }
+  </script>
+</body>
+</html>
